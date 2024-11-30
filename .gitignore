@@ -1,0 +1,7 @@
+/ll
+/nenv
+/__pycache__
+/.ipynb_checkpoints
+*.doc
+*.docx
+*.ipynb
