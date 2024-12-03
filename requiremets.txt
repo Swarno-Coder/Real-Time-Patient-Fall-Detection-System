@@ -1,0 +1,2 @@
+openvino>=23.0.1
+opencv-python

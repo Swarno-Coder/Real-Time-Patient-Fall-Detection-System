@@ -201,15 +201,17 @@ def detect_fall_from_keypoints(keypoints_dict):
                 if abs(left_knee["y_norm"] - left_hip["y_norm"]) < 0.2 and abs(right_knee["y_norm"] - right_hip["y_norm"]) < 0.2:
                     print("Alert: Fall Detected!")
                     return True
-
     return False
 
 
 import collections, time
 # Main processing function to run pose estimation.
-def run_pose_estimation(source=0, flip=False, fps=30, use_popup=False, skip_first_frames=0,w=1280,h=720):
+def run_pose_estimation(source=0, flip=False, fps=30, draw=True, use_popup=False, skip_first_frames=0,w=1280,h=720, out=False, output_video_path="output.avi"):
     pafs_output_key = compiled_model.output("Mconv7_stage2_L1")
     heatmaps_output_key = compiled_model.output("Mconv7_stage2_L2")
+    if out: 
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        output = cv2.VideoWriter(output_video_path, fourcc, fps, (w, h))
     player = None
     try:
         # Create a video player to play with target fps.
@@ -229,10 +231,13 @@ def run_pose_estimation(source=0, flip=False, fps=30, use_popup=False, skip_firs
                 print("Source ended")
                 break
             # If the frame is larger than full HD, reduce size to improve the performance.
-            scale = 1280 / max(frame.shape)
-            if scale < 1:
-                frame = cv2.resize(frame, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
-
+            scalex = w / frame.shape[1]
+            scaley = h / frame.shape[0]
+            # print(frame.shape,scale)
+            if max(scalex, scaley) < 1:
+                frame = cv2.resize(frame, None, fx=scalex, fy=scaley, interpolation=cv2.INTER_AREA)
+            # print(frame.shape,(scalex,scaley))
+            
             # Resize the image and change dims to fit neural network input.
             # (see https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/intel/human-pose-estimation-0001)
             input_img = cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
@@ -251,9 +256,10 @@ def run_pose_estimation(source=0, flip=False, fps=30, use_popup=False, skip_firs
             poses, scores = process_results(frame, pafs, heatmaps)
             # print(poses)
             # Draw poses on a frame.
-            frame = draw_poses(frame, poses, 0.1)
+            if draw:
+                frame = draw_poses(frame, poses, 0.1)
             kp = process_poses(poses,width,height)
-            detect_fall_from_keypoints(kp)
+            fall = detect_fall_from_keypoints(kp)
             
             processing_times.append(stop_time - start_time)
             # Use processing times from last 200 frames.
@@ -275,7 +281,7 @@ def run_pose_estimation(source=0, flip=False, fps=30, use_popup=False, skip_firs
                 1,
                 cv2.LINE_AA,
             )
-
+            if fall: cv2.putText(frame, "Fall Detected!", (150, 150), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 3)
             # Use this workaround if there is flickering.
             if use_popup:
                 cv2.imshow(title, frame)
@@ -283,10 +289,12 @@ def run_pose_estimation(source=0, flip=False, fps=30, use_popup=False, skip_firs
                 # escape = 27
                 if key == 27:
                     break
-            else:
-                # Encode numpy array to jpg.
-                # _, encoded_img = cv2.imencode(".jpg", frame, params=[cv2.IMWRITE_JPEG_QUALITY, 90])
-                cv2.imshow("processd image", frame)
+            # else:
+            #     # Encode numpy array to jpg.
+            #     # _, encoded_img = cv2.imencode(".jpg", frame, params=[cv2.IMWRITE_JPEG_QUALITY, 90])
+            #     cv2.imshow("processd image", frame)
+            if out:
+                output.write(frame)
                 
     # ctrl-c
     except KeyboardInterrupt:
@@ -304,4 +312,4 @@ def run_pose_estimation(source=0, flip=False, fps=30, use_popup=False, skip_firs
             
 if __name__ == "__main__":
     
-    run_pose_estimation(source='test/test4.mp4', flip=False, use_popup=True, fps=60)
+    run_pose_estimation(source='test/test4.mp4', flip=False, use_popup=False, fps=60, out=True)
