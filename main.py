@@ -10,6 +10,7 @@ if __name__ == "__main__":
     parser.add_argument('--fps', type=int, default=60, help='Frames per second for the output video')
     parser.add_argument('--out', action='store_true', help='Output the processed video')
     parser.add_argument('--output_video_path', type=str, help='Path to save the output video')
+    parser.add_argument('--video_name', type=str, help='The output video name')
 
     args = parser.parse_args()
 
@@ -20,5 +21,6 @@ if __name__ == "__main__":
         draw=args.draw,
         fps=args.fps,
         out=args.out,
-        output_video_path=args.output_video_path
+        output_video_path=args.output_video_path,
+        video_name=args.video_name
     )

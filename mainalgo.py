@@ -1,6 +1,6 @@
 import notebook_utils as utils
 from openposedecoder import OpenPoseDecoder
-
+import os
 decoder = OpenPoseDecoder()
 
 import numpy as np
@@ -206,12 +206,10 @@ def detect_fall_from_keypoints(keypoints_dict):
 
 import collections, time
 # Main processing function to run pose estimation.
-def run_pose_estimation(source=0, flip=False, fps=30, draw=True, use_popup=False, skip_first_frames=0,w=1280,h=720, out=False, output_video_path="output.avi"):
+def run_pose_estimation(source=0, flip=False, fps=30, draw=True, use_popup=False, skip_first_frames=0,w=1280,h=720, out=False, output_video_path="\demo", video_name='output'):
     pafs_output_key = compiled_model.output("Mconv7_stage2_L1")
     heatmaps_output_key = compiled_model.output("Mconv7_stage2_L2")
-    if out: 
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        output = cv2.VideoWriter(output_video_path, fourcc, fps, (w, h))
+    
     player = None
     try:
         # Create a video player to play with target fps.
@@ -221,9 +219,10 @@ def run_pose_estimation(source=0, flip=False, fps=30, draw=True, use_popup=False
         if use_popup:
             title = "Press ESC to Exit"
             cv2.namedWindow(title, cv2.WINDOW_GUI_NORMAL | cv2.WINDOW_AUTOSIZE)
-
+        fpslst = []
+        os.makedirs(f"{output_video_path}/{video_name}")
         processing_times = collections.deque()
-
+        counter = 0
         while True:
             # Grab the frame.
             frame = player.next()
@@ -237,7 +236,7 @@ def run_pose_estimation(source=0, flip=False, fps=30, draw=True, use_popup=False
             if max(scalex, scaley) < 1:
                 frame = cv2.resize(frame, None, fx=scalex, fy=scaley, interpolation=cv2.INTER_AREA)
             # print(frame.shape,(scalex,scaley))
-            
+            x, y, _ = frame.shape
             # Resize the image and change dims to fit neural network input.
             # (see https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/intel/human-pose-estimation-0001)
             input_img = cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
@@ -270,6 +269,7 @@ def run_pose_estimation(source=0, flip=False, fps=30, draw=True, use_popup=False
             # mean processing time [ms]
             processing_time = np.mean(processing_times) * 1000
             fps = 1000 / processing_time
+            fpslst.append(fps)
             # print(fps, processing_time)
             cv2.putText(
                 frame,
@@ -289,12 +289,11 @@ def run_pose_estimation(source=0, flip=False, fps=30, draw=True, use_popup=False
                 # escape = 27
                 if key == 27:
                     break
-            # else:
-            #     # Encode numpy array to jpg.
-            #     # _, encoded_img = cv2.imencode(".jpg", frame, params=[cv2.IMWRITE_JPEG_QUALITY, 90])
-            #     cv2.imshow("processd image", frame)
-            if out:
-                output.write(frame)
+            cv2.imwrite(f"{output_video_path}/{video_name}/{counter}.jpg",frame)
+            counter = counter + 1
+            
+        if out:
+            create_video(output_video_path, video_name, int(np.mean(fpslst)),0,(y,x))
                 
     # ctrl-c
     except KeyboardInterrupt:
@@ -308,7 +307,20 @@ def run_pose_estimation(source=0, flip=False, fps=30, draw=True, use_popup=False
             player.stop()
         if use_popup:
             cv2.destroyAllWindows()
-            
+import shutil            
+def create_video(image_dir, out_name="output", fps=24, startimno=0,video_shape=(width,height)):
+    
+    # Create a VideoWriter object
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(f'{image_dir}/{out_name}.m4v', fourcc, fps, video_shape)
+    # Read all the images and add them to the video
+    for i in range(startimno, len(os.listdir(f'{image_dir}/{out_name}'))):
+        img = cv2.imread(f'{image_dir}/{out_name}/{i}.jpg')
+        out.write(img)
+    if os.path.exists(f'{image_dir}/{out_name}'):
+        shutil.rmtree(f'{image_dir}/{out_name}')
+    # Release the VideoWriter object
+    out.release()            
             
 if __name__ == "__main__":
     
