@@ -210,7 +210,7 @@ def run_pose_estimation(source=0, flip=False, fps=30, draw=True, use_popup=False
     pafs_output_key = compiled_model.output("Mconv7_stage2_L1")
     heatmaps_output_key = compiled_model.output("Mconv7_stage2_L2")
     if out: 
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         output = cv2.VideoWriter(output_video_path, fourcc, fps, (w, h))
     player = None
     try:
