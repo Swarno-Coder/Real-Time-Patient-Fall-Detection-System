@@ -1,6 +1,6 @@
 # Real-Time Patient Fall Detection System
 
-This repo is for Real-Time Patient Monitoring Dashboard paper submission in Intel IEEE INDICON 2024.
+This repo is for Real-Time Patient Fall Detection System paper submission in Intel IEEE INDICON 2024.
 
 ## Pose Estimation
 
